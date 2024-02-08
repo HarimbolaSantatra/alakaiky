@@ -23,57 +23,79 @@ def exec_on_remote(
     """execute a sets of command on a remote host"""
     if debug:
         logging.basicConfig(level=logging.DEBUG)
-        logging.debug("Beginning execution on remote ...")
+    logging.debug("Beginning execution on remote ...")
     remote_cmd = ""
     iteration = 0
     nb_cmd = len(cmds)
     for cmd in cmds:
-        remote_cmd += "sudo " + cmd if is_root else cmd
+        logging.debug(f"cmd: {cmd}")
+        if is_root:
+            remote_cmd += "sudo "
+        remote_cmd += cmd + " "
+        logging.debug(f"result: {remote_cmd}")
         iteration += 1
+        logging.debug(f"iteration: {iteration}")
         if iteration != nb_cmd:
             remote_cmd += " && "
     remote_cmd = "ssh -t {0} \"{1}\"".format(
             REMOTE_REF,
             remote_cmd
             )
-    dry_run_cmd = "Command to run: {}".format(remote_cmd)
-    logging.debug(dry_run_cmd)
+    cmd_debug_str = "Command to run: {}".format(remote_cmd)
+
     if dry_run:
-        print(dry_run_cmd)
-    elif not debug:
+        print(cmd_debug_str)
+        logging.info("Dry run done.")
+    else:
+        logging.info(cmd_debug_str)
+        logging.info("Executing subprocess ...")
         subprocess.run(remote_cmd, shell=True, check=False)
 
 
-def push(remote_files: list, dests: list, dry_run=False, debug=False, is_root=True):
+def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=True):
     """
     Sync local file to remote destination.
     files: local files
     dests: destination folders
     """
 
-    files: str = " ".split(str(x) for x in remote_files)
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+
+    files: str = " ".join(local_files)
+
+    logging.info("Remote files to copy: {}".format(files))
 
     # sync to REMOTE_HOME first
+    logging.debug("Copying from local to {}:{}".format(
+        REMOTE_REF, REMOTE_HOME))
     rsync_cmd = "rsync -aP {0} {1}".format(
             files,
             "{}:{}".format(REMOTE_REF, REMOTE_HOME)
             )
+    subprocess.run(rsync_cmd, shell=True, check=True)
 
     # ... then sync to remote root folder: dest
     rsync_cmd = ""
     for i in range(len(dests)):
         rsync_cmd += "sudo rsync -aP {0} {1}".format(
-                "{}/{}".format(REMOTE_HOME, files[i]),
+                "{}/{}".format(REMOTE_HOME, local_files[i]),
                 dests[i]
                 )
-    exec_on_remote([rsync_cmd], dry_run=dry_run, debug=debug, is_root=is_root)
+        if i != (len(dests) - 1):
+            rsync_cmd += " && "
 
+    logging.debug("Command to execute on remote server: {}".format(rsync_cmd))
+    logging.debug("dry_run: " + str(dry_run))
+    logging.debug("is_root: " + str(is_root))
 
-    if debug:
-        logging.basicConfig(level=logging.DEBUG)
-        logging.debug("Remote files to copy: {}".format(files))
-    else:
-        exec_on_remote([rsync_cmd], debug=debug, is_root=is_root)
+    exec_on_remote(
+            [rsync_cmd],
+            dry_run=dry_run,
+            debug=debug,
+            is_root=is_root,
+            )
+
 
 
 def pull(
@@ -96,37 +118,61 @@ def pull(
 def bad_test():
     root_location = "/var/ossec"
     # /var/ossec is not readable for non-root user
-    pass
+    cmds = [
+            f"ls -lh {root_location}"
+            ]
+    exec_on_remote(cmds,
+                   is_root=True)
+    exec_on_remote(cmds,
+                   is_root=False)
+
+
+def map_log_level(level: str):
+    """
+    handle log level. Map a 'level' string to a log level
+    """
+    if level == "debug":
+        return logging.DEBUG
+    elif level == "info":
+        return logging.INFO
+    elif level == "warning":
+        return logging.WARNING
+    elif level == "error":
+        return logging.ERROR
+    elif level == "critical":
+        return logging.CRITICAL
+    elif level == "debug":
+        return logging.WARNING
+    else:
+        return logging.WARNING
 
 
 def main():
+
     # Set parser
-    parser = argparse.ArgumentParser(description="Copy files with remote and local environment")
+    parser = argparse.ArgumentParser(description="Copy files between remote and local environment")
     parser.add_argument("-n", "--dry-run",
                         dest="dry_run",
                         help=f"Do not execute. Instead, execute a dry-run",
                         action="store_true")
-    parser.add_argument("-d", "--debug",
-                        help=f"Test and debugging purposes",
-                        action="store_true")
+    parser.add_argument("-l", "--log",
+                        default="warning",
+                        dest="log_level",
+                        metavar="LOG",
+                        help=f"Set log level: critical | debug | info | warning (default)")
     args = parser.parse_args()
 
-    if args.debug:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.WARNING
+    log_level = map_log_level(args.log_level)
     logging.basicConfig(level=log_level)
     logging.debug("Configuration done.")
     logging.debug("REMOTE_HOME is " + REMOTE_HOME)
     logging.debug("IP is " + IP)
     logging.debug("USERNAME is " + USERNAME)
 
-
-    cmds = [
-            "ls -lh /var/ossec"
-            ]
-
-    exec_on_remote(cmds, debug=args.debug, dry_run=args.dry_run)
+    test_files = ["test1", "test2"]
+    push(test_files, [ "/home/santatra/",  "/home/santatra/"],
+         debug=args.log_level, 
+         dry_run=args.dry_run)
 
 
 if __name__ == '__main__':
