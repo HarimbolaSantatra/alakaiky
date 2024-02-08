@@ -6,5 +6,5 @@
 # files
 config.yaml
 
-# custom files
-test.py
+# custom personnal files
+test*
