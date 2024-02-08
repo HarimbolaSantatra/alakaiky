@@ -1,0 +1,10 @@
+# vim related 
+*.swo
+*.swp
+*.vim
+
+# files
+alk-config.yaml
+
+# custom files
+test.py
