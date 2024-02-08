@@ -44,12 +44,31 @@ def exec_on_remote(
         subprocess.run(remote_cmd, shell=True, check=False)
 
 
-def push(files: str, dest: str, debug=False, is_root=True):
-    """Sync file to desc"""
+def push(remote_files: list, dests: list, dry_run=False, debug=False, is_root=True):
+    """
+    Sync local file to remote destination.
+    files: local files
+    dests: destination folders
+    """
+
+    files: str = " ".split(str(x) for x in remote_files)
+
+    # sync to REMOTE_HOME first
     rsync_cmd = "rsync -aP {0} {1}".format(
             files,
-            dest
+            "{}:{}".format(REMOTE_REF, REMOTE_HOME)
             )
+
+    # ... then sync to remote root folder: dest
+    rsync_cmd = ""
+    for i in range(len(dests)):
+        rsync_cmd += "sudo rsync -aP {0} {1}".format(
+                "{}/{}".format(REMOTE_HOME, files[i]),
+                dests[i]
+                )
+    exec_on_remote([rsync_cmd], dry_run=dry_run, debug=debug, is_root=is_root)
+
+
     if debug:
         logging.basicConfig(level=logging.DEBUG)
         logging.debug("Remote files to copy: {}".format(files))
@@ -57,25 +76,26 @@ def push(files: str, dest: str, debug=False, is_root=True):
         exec_on_remote([rsync_cmd], debug=debug, is_root=is_root)
 
 
-def sudo_fetch(
-        remote_file_paths: list,
-        debug=False):
-    """ remote_file_paths: a list of full files path """
-    files: str = " ".split(str(x) for x in remote_file_paths)
-    if debug:
-        logging.basicConfig(level=logging.DEBUG)
-        logging.debug("Remote files to copy: {}".format(files))
-    else:
-        push(files, REMOTE_HOME)
+def pull(
+        remote_files: list,
+        debug=False,
+        is_root=True
+        ):
+    """ 
+    Retrieve files on remote server and put it into the current alk_dest directory
+    remote_files: a list of full files path
+    """
+    for files in remote_files:
+        if debug:
+            logging.basicConfig(level=logging.DEBUG)
+            logging.debug("Remote files to copy: {}".format(files))
+        else:
+            subprocess.run(rsync_cmd)
 
 
 def bad_test():
     root_location = "/var/ossec"
     # /var/ossec is not readable for non-root user
-    pass
-
-
-def dry_run():
     pass
 
 
