@@ -18,7 +18,7 @@ def exec_on_remote(
         cmds: list, 
         dry_run=False,
         debug=False,
-        isRoot=True
+        is_root=True
         ):
     """execute a sets of command on a remote host"""
     if debug:
@@ -28,7 +28,7 @@ def exec_on_remote(
     iteration = 0
     nb_cmd = len(cmds)
     for cmd in cmds:
-        remote_cmd += "sudo " + cmd if isRoot else cmd
+        remote_cmd += "sudo " + cmd if is_root else cmd
         iteration += 1
         if iteration != nb_cmd:
             remote_cmd += " && "
@@ -44,9 +44,17 @@ def exec_on_remote(
         subprocess.run(remote_cmd, shell=True, check=False)
 
 
-def sudo_sync(src, dest):
+def push(files: str, dest: str, debug=False, is_root=True):
     """Sync file to desc"""
-    pass
+    rsync_cmd = "rsync -aP {0} {1}".format(
+            files,
+            dest
+            )
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+        logging.debug("Remote files to copy: {}".format(files))
+    else:
+        exec_on_remote([rsync_cmd], debug=debug, is_root=is_root)
 
 
 def sudo_fetch(
@@ -54,15 +62,11 @@ def sudo_fetch(
         debug=False):
     """ remote_file_paths: a list of full files path """
     files: str = " ".split(str(x) for x in remote_file_paths)
-    rsync = "rsync -aP {0} {1}".format(
-            files,
-            REMOTE_HOME
-            )
     if debug:
         logging.basicConfig(level=logging.DEBUG)
         logging.debug("Remote files to copy: {}".format(files))
     else:
-        exec_on_remote([rsync], debug=debug)
+        push(files, REMOTE_HOME)
 
 
 def bad_test():
