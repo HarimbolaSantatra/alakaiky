@@ -33,6 +33,7 @@ def exec_on_remote(
     remote_cmd = ""
     iteration = 0
     nb_cmd = len(cmds)
+    logging.debug(f"len of cmds is: {len(cmds)}")
     for cmd in cmds:
         logging.debug(f"cmd: {cmd}")
         if is_root:
@@ -49,13 +50,20 @@ def exec_on_remote(
             )
 
     if dry_run:
-        print("\n========")
+        print("\n======== EXEC ON REMOTE")
         print("Command to run on remote:\n\t{}".format(remote_cmd))
         print("========\n")
     else:
         logging.info("Command: {}".format(remote_cmd))
         logging.info("Executing subprocess ...")
         subprocess.run(remote_cmd, shell=True, check=False)
+
+
+def fix_perm():
+    """change files permission"""
+    logging.info("Fixing permission")
+    perm_cmd = f"sudo chown {USERNAME}:{USERNAME} {REMOTE_HOME}/*"
+    exec_on_remote([perm_cmd])
 
 
 def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=True):
@@ -67,6 +75,10 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
 
     if debug:
         logging.basicConfig(level=logging.DEBUG)
+
+    if len(local_files) != len(dests):
+        logging.critical("length of local and destination file does not match in push operation !")
+        exit(-1)
 
     files: str = " ".join(local_files)
 
@@ -103,7 +115,6 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
             )
 
 
-
 def pull(
         remote_files: list,
         dry_run=False,
@@ -126,31 +137,36 @@ def pull(
     logging.info("Remote file to copy: {}".format(
         ", ".join(remote_files)))
 
-    rsync_cmd = ""
+    rsync_cmd = []
     for i in range(len(remote_files)):
-        rsync_cmd += "rsync -aP {0} {1}".format(
+        rsync_cmd.append("rsync -aP {0} {1}".format(
             remote_files[i],
-            REMOTE_HOME)
-        if i != len(remote_files) - 1:
-            rsync_cmd += " && "
+            REMOTE_HOME))
 
-    exec_on_remote([rsync_cmd],
+    exec_on_remote(rsync_cmd,
                    dry_run=dry_run,
                    debug=debug,
                    is_root=is_root)
 
+    fix_perm()
+
     # ... then sync to REMOTE_HOME -> local
     rsync_cmd = "rsync ".format(REMOTE_REF)
-    for i in range(len(remote_files)):
-        rsync_cmd += "{}:{} ".format(REMOTE_REF, remote_files[i])
+
+    remote_home_files = []
+    for files in remote_files:
+        remote_home_files.append(os.path.basename(files))
+
+    for i in range(len(remote_home_files)):
+        rsync_cmd += "{}:{}/{} ".format(REMOTE_REF, REMOTE_HOME, remote_home_files[i])
     rsync_cmd += dest_dir
     logging.info(f"Copying to {dest_dir}")
     if dry_run:
-        print("\n========")
+        print("\n======== PULL")
         print("Remote files to copy: {}".format(
-            ", ".join(remote_files)
+            ", ".join(remote_home_files)
             ))
-        print("Command to run on copy from remote to local: {}".format(rsync_cmd))
+        print("Command on local host: {}".format(rsync_cmd))
         print("========\n")
     else:
         subprocess.run(rsync_cmd, shell=True, check=True)
@@ -193,9 +209,14 @@ def main():
 
     # Set parser
     parser = argparse.ArgumentParser(description="Copy files between remote and local environment")
+
+    # Main positional argument
+    parser.add_argument("operation",
+                        help="Main operation: push | pull")
+
     parser.add_argument("-f", "--file",
                         dest="files",
-                        help=f"Specify files for the main operation",
+                        help=f"Specify files for the main operation. (file to push or to pull). Can be multiple.",
                         metavar="FILE",
                         action="append",
                         required=True)
@@ -212,10 +233,16 @@ def main():
                         dest="is_root",
                         help="Execute remote command without sudo privileges. Default to false.",
                         action="store_false")
-    parser.add_argument("-d", "--dest",
+    parser.add_argument("-d", "--dest-pull",
                         type=str,
+                        dest="dest",
                         help="Specify destination directory for pull command. Ignored if command is not 'pull'",
                         action="store")
+    parser.add_argument("-s", "--dest-push",
+                        help="Specify destination directory on the remote server for push command",
+                        action="append",
+                        dest="remote_dests"
+                        )
     args = parser.parse_args()
 
     log_level = map_log_level(args.log_level)
@@ -225,12 +252,27 @@ def main():
     logging.debug("IP is " + IP)
     logging.debug("USERNAME is " + USERNAME)
 
-    pull(args.files,
-         debug=args.log_level, 
-         dry_run=args.dry_run,
-         is_root=args.is_root,
-         dest_dir=args.dest
-         )
+    operation = args.operation.lower()
+
+    if operation == 'push':
+        push(
+                args.files,
+                args.remote_dests,
+                dry_run=args.dry_run,
+                is_root=args.is_root,
+                )
+    elif operation == 'pull':
+        pull(args.files,
+             debug=args.log_level, 
+             dry_run=args.dry_run,
+             is_root=args.is_root,
+             dest_dir=args.dest
+             )
+    else:
+        print("Unknown operation!")
+        exit(1)
+
+
 
 
 if __name__ == '__main__':
