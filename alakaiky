@@ -79,7 +79,7 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
     # ... then sync to remote root folder: dest
     rsync_cmd = ""
     for i in range(len(dests)):
-        rsync_cmd += "sudo rsync -aP {0} {1}".format(
+        rsync_cmd += "rsync -aP {0} {1}".format(
                 "{}/{}".format(REMOTE_HOME, local_files[i]),
                 dests[i]
                 )
@@ -118,7 +118,7 @@ def pull(
 
     rsync_cmd = ""
     for i in range(len(remote_files)):
-        rsync_cmd += "sudo rsync -aP {0} {1}".format(
+        rsync_cmd += "rsync -aP {0} {1}".format(
             remote_files[i],
             REMOTE_HOME)
         if i != len(remote_files) - 1:
@@ -191,6 +191,10 @@ def main():
                         dest="log_level",
                         metavar="LOG",
                         help=f"Set log level: critical | debug | info | warning (default)")
+    parser.add_argument("-o", "--no-root",
+                        dest="is_root",
+                        help="Execute remote command without sudo privileges. Default to false.",
+                        action="store_false")
     args = parser.parse_args()
 
     log_level = map_log_level(args.log_level)
@@ -204,7 +208,8 @@ def main():
 
     pull(test_files,
          debug=args.log_level, 
-         dry_run=args.dry_run)
+         dry_run=args.dry_run,
+         is_root=args.is_root)
 
 
 if __name__ == '__main__':
