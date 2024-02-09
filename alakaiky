@@ -76,6 +76,11 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
     if debug:
         logging.basicConfig(level=logging.DEBUG)
 
+    if not dests:
+        print("Destination file empty !")
+        print("Maybe you forget to use the -s option.")
+        exit(-2)
+
     if len(local_files) != len(dests):
         logging.critical("length of local and destination file does not match in push operation !")
         exit(-1)
