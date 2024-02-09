@@ -6,5 +6,5 @@
 ```
 
 ## TODO
-- push to remote with sudo privileges
-- pull to remote with sudo privileges
+refac: dry_run function
+- add: resync to remote host original location automatically
