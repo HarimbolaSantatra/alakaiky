@@ -73,6 +73,8 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
     dests: destination folders
     """
 
+    logging.info("Running push")
+
     if debug:
         logging.basicConfig(level=logging.DEBUG)
 
@@ -135,6 +137,8 @@ def pull(
     Retrieve files on remote server and put it into the DEFAULT_DEST_DIR directory
     remote_files: a list of full files path
     """
+    logging.info("Running pull")
+
     # sync to root folder -> REMOTE_HOME first
 
     if not dest_dir:
