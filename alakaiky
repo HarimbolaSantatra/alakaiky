@@ -162,6 +162,7 @@ def map_log_level(level: str):
     """
     handle log level. Map a 'level' string to a log level
     """
+    level = level.lower()
     if level == "debug":
         return logging.DEBUG
     elif level == "info":
@@ -190,7 +191,7 @@ def main():
                         default="warning",
                         dest="log_level",
                         metavar="LOG",
-                        help=f"Set log level: critical | debug | info | warning (default)")
+                        help=f"Set log level: CRITICAL | DEBUG | INFO | WARNING (default)")
     parser.add_argument("-o", "--no-root",
                         dest="is_root",
                         help="Execute remote command without sudo privileges. Default to false.",
