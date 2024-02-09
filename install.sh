@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-file="./alakaiky"
+file="./alk"
 config_file="config.yaml"
 config_path="$HOME/.local/state/alakaiky"
 dest="/home/$USER/.local/bin"
