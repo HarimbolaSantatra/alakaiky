@@ -91,6 +91,10 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
             files,
             "{}:{}".format(REMOTE_REF, REMOTE_HOME)
             )
+    if dry_run:
+        print("\n======== PUSH")
+        print("Command on local:\n\t{}".format(rsync_cmd))
+        print("=========\n")
     subprocess.run(rsync_cmd, shell=True, check=True)
 
     # ... then sync to remote root folder: dest
