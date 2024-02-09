@@ -12,6 +12,7 @@ with open('config.yaml', 'r') as conf_file:
     REMOTE_HOME = conf["remote_home"]
 
 REMOTE_REF = "{}@{}".format(USERNAME, IP)
+DEST_DIR = "./alk-dest/"
 
 
 def exec_on_remote(
@@ -41,13 +42,13 @@ def exec_on_remote(
             REMOTE_REF,
             remote_cmd
             )
-    cmd_debug_str = "Command to run: {}".format(remote_cmd)
 
     if dry_run:
-        print(cmd_debug_str)
-        logging.info("Dry run done.")
+        print("\n========")
+        print("Command to run on remote:\n\t{}".format(remote_cmd))
+        print("========\n")
     else:
-        logging.info(cmd_debug_str)
+        logging.info("Command: {}".format(remote_cmd))
         logging.info("Executing subprocess ...")
         subprocess.run(remote_cmd, shell=True, check=False)
 
@@ -100,19 +101,49 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
 
 def pull(
         remote_files: list,
+        dry_run=False,
         debug=False,
         is_root=True
         ):
     """ 
-    Retrieve files on remote server and put it into the current alk_dest directory
+    Retrieve files on remote server and put it into the DEST_DIR directory
     remote_files: a list of full files path
     """
-    for files in remote_files:
-        if debug:
-            logging.basicConfig(level=logging.DEBUG)
-            logging.debug("Remote files to copy: {}".format(files))
-        else:
-            subprocess.run(rsync_cmd)
+    # sync to root folder -> REMOTE_HOME first
+
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+    logging.info("Remote file to copy: {}".format(
+        ", ".join(remote_files)))
+
+    rsync_cmd = ""
+    for i in range(len(remote_files)):
+        rsync_cmd += "sudo rsync -aP {0} {1}".format(
+            remote_files[i],
+            REMOTE_HOME)
+        if i != len(remote_files) - 1:
+            rsync_cmd += " && "
+
+    exec_on_remote([rsync_cmd],
+                   dry_run=dry_run,
+                   debug=debug,
+                   is_root=is_root)
+
+    # ... then sync to REMOTE_HOME -> local
+    rsync_cmd = "rsync ".format(REMOTE_REF)
+    for i in range(len(remote_files)):
+        rsync_cmd += "{}:{} ".format(REMOTE_REF, remote_files[i])
+    rsync_cmd += DEST_DIR
+    logging.info(f"Copying to {DEST_DIR}")
+    if dry_run:
+        print("\n========")
+        print("Remote files to copy: {}".format(
+            ", ".join(remote_files)
+            ))
+        print("Command to run on copy from remote to local: {}".format(rsync_cmd))
+        print("========\n")
+    else:
+        subprocess.run(rsync_cmd, shell=True, check=True)
 
 
 def bad_test():
@@ -169,8 +200,9 @@ def main():
     logging.debug("IP is " + IP)
     logging.debug("USERNAME is " + USERNAME)
 
-    test_files = ["test1", "test2"]
-    push(test_files, [ "/home/santatra/",  "/home/santatra/"],
+    test_files = ["/home/santatra/perso/alakaiky/test1", "/home/santatra/perso/alakaiky/test2"]
+
+    pull(test_files,
          debug=args.log_level, 
          dry_run=args.dry_run)
 
