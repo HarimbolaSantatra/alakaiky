@@ -193,6 +193,12 @@ def main():
 
     # Set parser
     parser = argparse.ArgumentParser(description="Copy files between remote and local environment")
+    parser.add_argument("-f", "--file",
+                        dest="files",
+                        help=f"Specify files for the main operation",
+                        metavar="FILE",
+                        action="append",
+                        required=True)
     parser.add_argument("-n", "--dry-run",
                         dest="dry_run",
                         help=f"Do not execute. Instead, execute a dry-run",
@@ -219,9 +225,7 @@ def main():
     logging.debug("IP is " + IP)
     logging.debug("USERNAME is " + USERNAME)
 
-    test_files = ["/home/santatra/perso/alakaiky/test1", "/home/santatra/perso/alakaiky/test2"]
-
-    pull(test_files,
+    pull(args.files,
          debug=args.log_level, 
          dry_run=args.dry_run,
          is_root=args.is_root,
