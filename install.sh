@@ -11,7 +11,7 @@ mkdir -p "$config_path"
 if [ ! -e $config_file ]; then
     echo "$config_file doesn't exist!"
 else
-    cp $config_file "$config_path"
+    cp $flag $config_file "$config_path"
 fi
 
 cp $flag $file "$dest"
