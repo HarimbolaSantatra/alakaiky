@@ -252,7 +252,7 @@ def main():
                         help="Specify destination directory for pull command. Ignored if command is not 'pull'",
                         action="store")
     parser.add_argument("-s", "--dest-push",
-                        help="Specify destination directory on the remote server for push command",
+                        help="Specify destination directory on the remote server for push command.  Ignored if command is not 'push'",
                         action="append",
                         dest="remote_dests"
                         )
