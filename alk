@@ -6,15 +6,17 @@ import yaml
 import logging
 import os
 
-CONFIG_FOLDER = "/home/{}/.local/state/alakaiky".format(
-        os.environ['USER'])
-CONFIG_FILE = f"{CONFIG_FOLDER}/config.yaml"
+CONFIG_FILE = "{}/.alk.yaml".format(os.getcwd())
 
 with open(CONFIG_FILE, 'r') as conf_file:
     conf = yaml.safe_load(conf_file)
-    USERNAME = conf["username"]
-    IP = conf["ip"]
-    REMOTE_HOME = conf["remote_home"]
+    try:
+        USERNAME = conf["username"]
+        IP = conf["ip"]
+        REMOTE_HOME = conf["remote_home"]
+    except KeyError:
+        print(f"Some configuration data is missing! Please check your config file: {CONFIG_FILE}")
+        exit(2)
 
 REMOTE_REF = "{}@{}".format(USERNAME, IP)
 DEFAULT_DEST_DIR = "./alk-dest/"
