@@ -8,15 +8,36 @@ import os
 
 CONFIG_FILE = "{}/.alk.yaml".format(os.getcwd())
 
-with open(CONFIG_FILE, 'r') as conf_file:
-    conf = yaml.safe_load(conf_file)
-    try:
-        USERNAME = conf["username"]
-        IP = conf["ip"]
-        REMOTE_HOME = conf["remote_home"]
-    except KeyError:
-        print(f"Some configuration data is missing! Please check your config file: {CONFIG_FILE}")
-        exit(2)
+def print_config_format():
+    print("""
+Here is the format of the yaml file:
+username: santatra
+ip: MY_IP_ADD
+remote_home: /home/santatra/
+""")
+
+def config_invalid():
+    print(f"Some configuration data is missing! Please check your config file: {CONFIG_FILE}")
+    print_config_format()
+
+def file_not_found():
+    print("Config file is missing")
+    print_config_format()
+
+try:
+    with open(CONFIG_FILE, 'r') as conf_file:
+        conf = yaml.safe_load(conf_file)
+        try:
+            USERNAME = conf["username"]
+            IP = conf["ip"]
+            REMOTE_HOME = conf["remote_home"]
+        except KeyError:
+            config_invalid()
+            exit(2)
+except FileNotFoundError:
+    file_not_found()
+    exit(3)
+
 
 REMOTE_REF = "{}@{}".format(USERNAME, IP)
 DEFAULT_DEST_DIR = "./alk-dest/"
