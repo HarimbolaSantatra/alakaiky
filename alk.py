@@ -171,10 +171,18 @@ def push(local_files: List[str], dests: List[str],
             is_root=is_root,
             )
 
-    files = [ os.path.basename(f) for f in local_files ]
-    base_dir = [ os.path.dirname(b) for b in dests ]
+    files_basenames = []
+    for f in local_files:
+        files_basenames.append(os.path.basename(f))
+
+    base_dirs = []
+    for b in dests:
+        base_dirs.append(os.path.dirname(b))
+
     if perm:
-        change_perm(pem, files + base_dir)
+        perm = str(perm)
+        for i in range(len(files_basenames)):
+            change_perm(perm, files_basenames[i] + base_dirs[i])
 
 
 def pull(
