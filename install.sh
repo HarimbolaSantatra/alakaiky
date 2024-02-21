@@ -2,7 +2,7 @@
 
 file="./alk.py"
 config_file=".alk.yaml"
-dest="/home/$USER/.local/bin"
+dest="/home/$USER/.local/bin/"
 dest_file="alk"
 flag="-v"
 
