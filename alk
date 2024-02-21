@@ -5,6 +5,7 @@ import argparse
 import yaml
 import logging
 import os
+from typing import List
 
 CONFIG_FILE = "{}/.alk.yaml".format(os.getcwd())
 
@@ -82,14 +83,36 @@ def exec_on_remote(
         subprocess.run(remote_cmd, shell=True, check=False)
 
 
-def fix_perm():
-    """change files permission"""
-    logging.info("Fixing permission")
-    perm_cmd = f"sudo chown {USERNAME}:{USERNAME} {REMOTE_HOME}/*"
+def change_perm(pmode: str, remote_files: list):
+    """Change files permission
+
+    Parameters
+    ----------
+    pmode : str 
+        Permission mode in GNU version mode (e.g: 777). Other format are not supported yet: +w, o-x, etc
+    remote_file : list
+        List of full path on the remote file
+    """
+    files = " ".join(remote_files)
+    logging.info("PermissionFiles: {}".format(", ".join(remote_files)))
+    logging.info(f"Changin permission to {pmode}")
+    perm_cmd = f"sudo chmod {pmode} {files}"
     exec_on_remote([perm_cmd])
 
 
-def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=True):
+def set_own(own: str, grp: str):
+    """Set file owner to current user if none of own and grp is specified."""
+    own = own or USERNAME
+    grp = grp or USERNAME
+    logging.info("Fixing permission")
+    perm_cmd = f"sudo chown own:grp {REMOTE_HOME}/*"
+    exec_on_remote([perm_cmd])
+
+
+def push(local_files: List[str], dests: List[str],
+         dry_run=False,
+         debug=False, is_root=True,
+         perm=None):
     """
     Sync local file to remote destination.
     files: local files
@@ -148,6 +171,11 @@ def push(local_files: list, dests: list, dry_run=False, debug=False, is_root=Tru
             is_root=is_root,
             )
 
+    files = [ os.path.basename(f) for f in local_files ]
+    base_dir = [ os.path.dirname(b) for b in dests ]
+    if perm:
+        change_perm(pem, files + base_dir)
+
 
 def pull(
         remote_files: list,
@@ -184,7 +212,7 @@ def pull(
                    debug=debug,
                    is_root=is_root)
 
-    fix_perm()
+    set_own()
 
     # ... then sync to REMOTE_HOME -> local
     rsync_cmd = "rsync ".format(REMOTE_REF)
@@ -279,6 +307,12 @@ def main():
                         action="append",
                         dest="remote_dests"
                         )
+
+    # Permission and owner related arguments
+    parser.add_argument("-p", "--perm",
+                        help="Set permission for all the file after the copy."
+                        )
+
     args = parser.parse_args()
 
     log_level = map_log_level(args.log_level)
