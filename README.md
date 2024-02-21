@@ -9,6 +9,7 @@
 add unit test for 
 - change_perm
 - set_own
+add pull_request to master workflow
 
 ## Branch
 | branch | type | description |

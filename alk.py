@@ -100,19 +100,22 @@ def change_perm(pmode: str, remote_files: list):
     exec_on_remote([perm_cmd])
 
 
-def set_own(own: str, grp: str):
+def set_own(own: str, grp: str, files: List[str]):
     """Set file owner to current user if none of own and grp is specified."""
     own = own or USERNAME
     grp = grp or USERNAME
     logging.info("Fixing permission")
-    perm_cmd = f"sudo chown own:grp {REMOTE_HOME}/*"
+    f = " ".join(files)
+    perm_cmd = f"sudo chown own:grp {f}"
     exec_on_remote([perm_cmd])
 
 
 def push(local_files: List[str], dests: List[str],
          dry_run=False,
          debug=False, is_root=True,
-         perm=None):
+         perm=None,
+         owner=None,
+         group=None):
     """
     Sync local file to remote destination.
     files: local files
@@ -179,10 +182,18 @@ def push(local_files: List[str], dests: List[str],
     for b in dests:
         base_dirs.append(os.path.dirname(b))
 
+
     if perm:
         perm = str(perm)
         for i in range(len(files_basenames)):
-            change_perm(perm, files_basenames[i] + base_dirs[i])
+            full_remote_files = files_basenames[i] + base_dirs[i]
+            change_perm(perm, full_remote_files)
+            if owner and group:
+                set_own(owner, group, full_remote_files)
+            elif owner:
+                set_own(owner, owner, full_remote_files)
+
+
 
 
 def pull(
@@ -338,6 +349,9 @@ def main():
                 args.remote_dests,
                 dry_run=args.dry_run,
                 is_root=args.is_root,
+                perm="640",
+                owner="root",
+                group="wazuh"
                 )
     elif operation == 'pull':
         pull(args.files,
